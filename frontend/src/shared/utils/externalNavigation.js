@@ -358,15 +358,17 @@ export const openExternalCheckout = async (url) => {
       return true;
     }
 
-    // 3. Try window.open to break out of the WebView
-    const windowOpened = openUsingWindowOpen(targetUrl, 'webview-window-open');
-    if (windowOpened) {
-      return true;
-    }
+    // 3. Try window.open to break out of the WebView (using target _blank)
+    openUsingWindowOpen(targetUrl, 'webview-window-open');
 
-    // 4. Try anchor-based open as a last external attempt
-    const anchorOpened = openUsingAnchor(targetUrl, 'webview-anchor-open');
-    if (anchorOpened) {
+    // 4. Try dynamic anchor click breakout (using target _blank and noopener)
+    openUsingAnchor(targetUrl, 'webview-anchor-open');
+
+    // 5. Try intent-based redirection fallback to force default Chrome/browser
+    if (isAndroidWebView() || globalThis.window?.__isRydon24WebView) {
+      const intentUrl = convertToAndroidIntentUrl(targetUrl);
+      recordCheckoutDiagnostic({ status: 'webview-intent-fallback', intentUrl });
+      globalThis.location.href = intentUrl;
       return true;
     }
 
