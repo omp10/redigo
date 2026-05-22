@@ -112,6 +112,12 @@ const SupportChatPanel = ({
   className = '',
   initialDraft = '',
   surface = 'card',
+  targetConversationKey = '',
+  targetPeerRole = '',
+  targetPeerId = '',
+  targetPeerName = '',
+  targetPeerPhone = '',
+  showSidebar = true,
 }) => {
   const session = useMemo(
     () => getChatSession(preferredRole || (mode === 'admin' ? 'admin' : undefined)),
@@ -147,6 +153,35 @@ const SupportChatPanel = ({
   const [isConnected, setIsConnected] = useState(socketService.isConnected());
   const bottomRef = useRef(null);
   const appliedInitialDraftRef = useRef('');
+
+  useEffect(() => {
+    if (targetConversationKey) {
+      setSelectedConversationKey(targetConversationKey);
+      setConversations((current) => {
+        const identityKey = getConversationIdentityKey(targetConversationKey);
+        const exists = current.some(
+          (item) => getConversationIdentityKey(item.conversationKey) === identityKey
+        );
+        if (!exists) {
+          const synthetic = {
+            conversationKey: targetConversationKey,
+            peer: {
+              role: targetPeerRole || parseSupportConversationKey(targetConversationKey)?.peerRole || 'user',
+              id: targetPeerId || parseSupportConversationKey(targetConversationKey)?.peerId || '',
+              name: targetPeerName || 'Support Contact',
+              phone: targetPeerPhone || '',
+            },
+            latestMessage: null,
+            unreadCount: 0,
+            updatedAt: new Date().toISOString(),
+          };
+          return dedupeConversations([synthetic, ...current]);
+        }
+        return current;
+      });
+    }
+  }, [targetConversationKey, targetPeerRole, targetPeerId, targetPeerName, targetPeerPhone]);
+
   const normalizedSelectedConversationKey = useMemo(
     () => getConversationIdentityKey(selectedConversationKey),
     [selectedConversationKey],
@@ -650,8 +685,8 @@ const SupportChatPanel = ({
         </div>
       </div>
 
-      <div className={`grid min-h-0 flex-1 ${isPlainSurface ? 'h-full' : 'min-h-[calc(100vh-220px)]'} ${isAdminPanel ? 'xl:grid-cols-[380px_1fr]' : 'grid-cols-1'}`}>
-        {isAdminPanel && (
+      <div className={`grid min-h-0 flex-1 ${isPlainSurface ? 'h-full' : 'min-h-[calc(100vh-220px)]'} ${isAdminPanel && showSidebar ? 'xl:grid-cols-[380px_1fr]' : 'grid-cols-1'}`}>
+        {isAdminPanel && showSidebar && (
           <aside className="flex min-h-0 flex-col border-r-[1.5px] border-slate-200/60 bg-[#F8FAFC]">
             <div className="shrink-0 border-b border-slate-200/60 bg-white p-5">
               <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 transition-all focus-within:border-indigo-600/30 focus-within:ring-4 focus-within:ring-indigo-600/5">

@@ -1,20 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as Motion from 'framer-motion';
 import { AnimatePresence } from 'framer-motion';
-import { 
-    User, 
-    Car, 
-    FileText, 
-    Bell, 
-    History, 
-    CreditCard, 
-    UserPlus, 
-    ShieldCheck, 
-    HelpCircle, 
-    LogOut, 
-    ArrowRight, 
-    Star, 
-    Route, 
+import {
+    User,
+    Car,
+    FileText,
+    Bell,
+    History,
+    CreditCard,
+    UserPlus,
+    ShieldCheck,
+    HelpCircle,
+    LogOut,
+    ArrowRight,
+    Star,
+    Route,
     ChevronRight,
     CheckCircle2,
     Wallet,
@@ -90,7 +90,7 @@ const DriverProfile = () => {
     const navigate = useNavigate();
     const [routeBookingPreferences, setRouteBookingPreferences] = useState(() => readRouteBookingPreferences());
     const [isLogoutOpen, setIsLogoutOpen] = useState(false);
-    const [legalModal, setLegalModal] = useState(null); 
+    const [legalModal, setLegalModal] = useState(null);
     const [driver, setDriver] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -309,9 +309,9 @@ Processing Time: Refunds are typically credited back to the original payment met
                 { id: 'drivers', label: 'Manage Drivers', icon: <UserPlus size={20} />, path: `${routePrefix}/manage-drivers` },
             ]
         }] : []),
-                {
-                    title: 'Your Account',
-                    items: [
+        {
+            title: 'Your Account',
+            items: [
                 { id: 'personal', label: 'Personal Information', sub: driverPhone, icon: <User size={20} />, path: `${routePrefix}/edit-profile` },
                 { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} />, path: `${routePrefix}/wallet` },
                 { id: 'bankDetails', label: 'Bank Details', sub: bankDetailsSubtitle, icon: <Landmark size={20} />, action: openBankDetails },
@@ -378,22 +378,21 @@ Processing Time: Refunds are typically credited back to the original payment met
                     </div>
                     {/* Integrated Profile Image */}
                     <div className="relative">
-                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden group ${
-                            hasProfileImage ? 'bg-slate-900' : 'bg-slate-100 border border-slate-200'
-                        }`}>
-                             {hasProfileImage ? (
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden group ${hasProfileImage ? 'bg-slate-900' : 'bg-slate-100 border border-slate-200'
+                            }`}>
+                            {hasProfileImage ? (
                                 <img
                                     src={driver?.profileImage}
                                     alt={driverName}
                                     className="w-full h-full object-cover"
                                 />
-                             ) : (
+                            ) : (
                                 <User size={30} className="text-slate-500" strokeWidth={1.8} />
-                             )}
+                            )}
                         </div>
                         {hasProfileImage ? (
                             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-lg border-2 border-white flex items-center justify-center shadow-sm">
-                                 <Check size={12} className="text-white" strokeWidth={4} />
+                                <Check size={12} className="text-white" strokeWidth={4} />
                             </div>
                         ) : null}
                     </div>
@@ -439,7 +438,7 @@ Processing Time: Refunds are typically credited back to the original payment met
                         <h3 className="px-6 text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">{section.title}</h3>
                         <div className="space-y-0">
                             {section.items.map((item) => (
-                                <Motion.motion.div 
+                                <Motion.motion.div
                                     key={item.id}
                                     whileTap={item.type !== 'toggle' ? { backgroundColor: '#F8F9FA' } : {}}
                                     onClick={() => {
@@ -458,12 +457,12 @@ Processing Time: Refunds are typically credited back to the original payment met
                                         </div>
                                     </div>
                                     {item.type === 'toggle' ? (
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); handleRouteBookingToggle(); }}
                                             disabled={routeBookingBusy}
                                             className={`w-10 h-5.5 rounded-full relative transition-colors duration-300 ${routeBookingPreferences.enabled ? 'bg-slate-900' : 'bg-slate-200'} ${routeBookingBusy ? 'opacity-70' : ''}`}
                                         >
-                                            <Motion.motion.div 
+                                            <Motion.motion.div
                                                 animate={{ x: routeBookingPreferences.enabled ? 20 : 2 }}
                                                 className="absolute top-1 w-3.5 h-3.5 rounded-full bg-white shadow-sm"
                                             />
@@ -485,15 +484,15 @@ Processing Time: Refunds are typically credited back to the original payment met
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider">Owner Support</h3>
                     </div>
-                    
+
                     <div className="space-y-5">
-                        <a href="mailto:rydon24trawler@gmail.com" className="flex items-center gap-4 group">
+                        <a href="mailto:supportrydon@gmail.com" className="flex items-center gap-4 group">
                             <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors shadow-sm">
                                 <Mail size={18} />
                             </div>
                             <div>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Support</p>
-                                <p className="text-[14px] font-bold text-slate-800">rydon24trawler@gmail.com</p>
+                                <p className="text-[14px] font-bold text-slate-800">supportrydon@gmail.com</p>
                             </div>
                         </a>
 
@@ -512,7 +511,7 @@ Processing Time: Refunds are typically credited back to the original payment met
 
             {/* Sign Out Section */}
             <div className="px-6 py-6">
-                <button 
+                <button
                     onClick={() => setIsLogoutOpen(true)}
                     className="flex items-center gap-3 text-rose-500 font-bold text-[13px] active:translate-x-1 transition-transform"
                 >
