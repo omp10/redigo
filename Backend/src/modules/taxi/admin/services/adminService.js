@@ -2542,8 +2542,8 @@ const syncSettingRows = (rows, payload) =>
     };
   });
 
-const DEFAULT_ADMIN_EMAIL = 'admin@gmail.com';
-const DEFAULT_ADMIN_PASSWORD = '12345';
+const DEFAULT_ADMIN_EMAIL = 'redigo@gmail.com';
+const DEFAULT_ADMIN_PASSWORD = '123456';
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$/;
 
 const syncDefaultAdminRecord = async () => {

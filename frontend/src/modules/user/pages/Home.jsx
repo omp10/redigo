@@ -706,7 +706,7 @@ const Home = () => {
             <div className="relative z-10 flex h-full items-start justify-center px-6 pt-10 text-left">
               <div className="flex max-w-[340px] flex-col items-start px-2 py-2 -translate-x-4">
                 <div className="text-[48px] font-black tracking-[-0.04em] text-[#FFB300] drop-shadow-[0_10px_30px_rgba(255,179,0,0.4)] leading-none">
-                  Rydon <span className="text-slate-900">24</span>
+                  Redigo
                 </div>
                 <div className="mt-2 text-[14px] font-sans italic font-black tracking-wide text-slate-800">
                   Your Trusted Journey Partner

@@ -23,7 +23,7 @@ if (!MONGO_URI) {
 }
 
 // ── Admin credentials ────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'admin@admin.com';
+const ADMIN_EMAIL = 'redigo@gmail.com';
 const ADMIN_PASS  = '123456';
 const ADMIN_NAME  = 'Super Admin';
 
