@@ -23,11 +23,11 @@ function LandingPage() {
   const appLinks = [
     {
       label: 'User App',
-      href: 'https://play.google.com/store/apps/details?id=com.rydon24.user',
+      href: 'https://play.google.com/store/apps/details?id=com.Redigo.user',
     },
     {
       label: 'Driver App',
-      href: 'https://play.google.com/store/apps/details?id=com.rydon24.driver',
+      href: 'https://play.google.com/store/apps/details?id=com.Redigo.driver',
     },
   ];
 
@@ -70,7 +70,7 @@ function LandingPage() {
         <div className="new-top-bar">
           <div className="new-logo-container">
              <a href="/" className="new-logo">
-               <span style={{color: '#333'}}>Rydon24</span>
+               <span style={{color: '#333'}}>Redigo</span>
              </a>
           </div>
           <div className="new-top-contacts">
@@ -90,7 +90,7 @@ function LandingPage() {
           <div className="new-nav-bg-slant"></div>
           <div className="new-nav-container">
             <a href="/" className="mobile-only-logo">
-               <span>Rydon24</span>
+               <span>Redigo</span>
             </a>
             <nav className={`new-nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
               <a href="#home" className={`new-nav-link ${activeTab === 'home' ? 'active' : ''}`} onClick={handleRedirect('#home', 'home')}>Home</a>
@@ -103,7 +103,7 @@ function LandingPage() {
             </nav>
             <div className="new-nav-actions">
               <button className="new-login-btn hidden-mobile" onClick={() => navigate('/login')}>Login</button>
-              <button className="new-book-btn hidden-mobile" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.rydon24.user', '_blank')}>Book a Taxi</button>
+              <button className="new-book-btn hidden-mobile" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.Redigo.user', '_blank')}>Book a Taxi</button>
               <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                 ☰
               </button>
@@ -118,7 +118,7 @@ function LandingPage() {
             <h1 className="new-hero-title">Book your taxi from<br/>anywhere today!</h1>
             <p className="new-hero-desc">Everything your taxi business needs is already here!<br/>Rydon made for taxi service companies!</p>
             <div className="new-hero-cta-row">
-              <button className="new-hero-action-btn" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.rydon24.user', '_blank')}>Book Your Ride</button>
+              <button className="new-hero-action-btn" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.Redigo.user', '_blank')}>Book Your Ride</button>
               <button className="new-hero-login-btn" onClick={() => navigate('/login')}>
                 <LogIn size={18} />
                 <span>Login</span>
@@ -266,7 +266,7 @@ function LandingPage() {
             <img src={checkUsOutImg} alt="Check Us Out" style={{ width: '100%', height: '100%', objectCover: 'cover' }} />
           </div>
           <div style={{ flex: '1 1 400px', padding: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h3 style={{ fontSize: '32px', fontWeight: '800', color: '#1a1a1a', marginBottom: '20px' }}>Join the Rydon24 Community</h3>
+            <h3 style={{ fontSize: '32px', fontWeight: '800', color: '#1a1a1a', marginBottom: '20px' }}>Join the Redigo Community</h3>
             <p style={{ fontSize: '16px', color: '#666', lineHeight: '1.8', marginBottom: '30px' }}>
               Follow us on social media to get the latest updates, exclusive offers, and behind-the-scenes content. 
               Be part of the fastest growing transportation network in the region.
@@ -307,7 +307,7 @@ function LandingPage() {
               <h3 className="newsletter-title">Subscribe Our Newsletter.</h3>
               <form className="newsletter-form">
                 <input type="email" placeholder="Email" />
-                <button type="button" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.rydon24.user', '_blank')}>Book Now →</button>
+                <button type="button" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.Redigo.user', '_blank')}>Book Now →</button>
               </form>
             </div>
           </div>
@@ -326,7 +326,7 @@ function LandingPage() {
               <a href="#" className="social-icon">in</a>
               <a href="#" className="social-icon">y</a>
             </div>
-            <div className="footer-website">www.Rydon24.com</div>
+            <div className="footer-website">www.Redigo.com</div>
           </div>
           <div className="footer-col-2">
             <h3>Quick Links</h3>
@@ -358,7 +358,7 @@ function LandingPage() {
             <Link to="/terms">Terms & Conditions</Link>
           </div>
           <div className="footer-copyright">
-            Copyright 2026 © All Right Reserved Design by Rydon24
+            Copyright 2026 © All Right Reserved Design by Redigo
           </div>
         </div>
       </footer>

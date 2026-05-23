@@ -3,7 +3,7 @@
 try {
   const ua = navigator.userAgent;
   if (/; wv\)/i.test(ua) || /Version\/[\d.]+/i.test(ua)) {
-    window.__isRydon24WebView = true;
+    window.__isRedigoWebView = true;
     const spoofedUa = ua
       .replace(/; wv\)/g, '')
       .replace(/Version\/[\d.]+\s*/g, '');

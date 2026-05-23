@@ -4,5 +4,5 @@ dist/
 build/
 .DS_Store
 Thumbs.db
-rydon24_flutter_shell/
-rydon24_driver_webview/
+Redigo_flutter_shell/
+Redigo_driver_webview/

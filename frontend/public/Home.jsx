@@ -80,7 +80,7 @@ const Home = () => {
             <div className="relative z-10 flex h-full items-center justify-center px-6 pt-16 text-left">
               <div className="flex max-w-[340px] flex-col items-start px-2 py-2 -translate-x-6 translate-y-12">
                 <div className="text-[30px] font-serif font-extrabold tracking-[0.28em] text-slate-600 drop-shadow-[0_2px_10px_rgba(255,255,255,0.85)]">
-                  #RYDON24
+                  #Redigo
                 </div>
                 <div className="mt-1 text-[12px] font-sans italic font-semibold tracking-wide text-slate-600 drop-shadow-[0_1px_8px_rgba(255,255,255,0.8)]">
                   Redefining Your Indore Journey

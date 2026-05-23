@@ -1,5 +1,5 @@
 export const SUPPORT_INFO = {
-  companyName: 'Rydon24 Trawler',
+  companyName: 'Redigo Trawler',
   ownerName: 'Sandeep Kumar',
   phone: '93893 94808',
   phoneHref: '7409129517',

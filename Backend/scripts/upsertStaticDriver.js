@@ -23,7 +23,7 @@ const connect = async () => {
 };
 
 const buildReferralCode = (phone) => `DRV${String(phone || '').slice(-4)}STATIC`;
-const buildRoleEmail = (role) => `${role}.${STATIC_PHONE}@rydon24.local`;
+const buildRoleEmail = (role) => `${role}.${STATIC_PHONE}@Redigo.local`;
 const now = () => new Date();
 
 const ensureServiceLocation = async () => {

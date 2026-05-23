@@ -6,7 +6,7 @@ import path from 'path';
 dotenv.config({ path: 'c:/Users/SHUBHAM/Desktop/Appzeto-Taxi/Backend/.env' });
 
 const mongoUri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB_NAME || 'rydon24';
+const dbName = process.env.MONGODB_DB_NAME || 'Redigo';
 
 const goodsTypesData = [
     {

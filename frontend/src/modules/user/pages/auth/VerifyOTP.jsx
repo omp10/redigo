@@ -42,7 +42,7 @@ const VerifyOTP = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const appName = settings.general?.app_name || 'Rydon24';
+  const appName = settings.general?.app_name || 'Redigo';
   const appLogo = settings.general?.logo || settings.customization?.logo || settings.general?.favicon || '';
 
   useEffect(() => {

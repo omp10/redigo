@@ -7,20 +7,20 @@ const LinksPage = () => {
   const links = [
     {
       id: 'user',
-      title: 'Rydon24 - User app',
+      title: 'Redigo - User app',
       subtitle: 'Book rides, send parcels, and more.',
       description: 'Get where you need to go with ease. Request a ride or send packages across the city in minutes.',
-      url: 'https://play.google.com/store/apps/details?id=com.rydon24.user',
+      url: 'https://play.google.com/store/apps/details?id=com.Redigo.user',
       type: 'Customer App',
       icon: <Zap className="link-icon" />,
       color: '#FFB300'
     },
     {
       id: 'driver',
-      title: 'Rydon24 Driver',
-      subtitle: 'Drive and earn with Rydon24.',
+      title: 'Redigo Driver',
+      subtitle: 'Drive and earn with Redigo.',
       description: 'Join our fleet of professional drivers. Flexible hours, great earnings, and a supportive community.',
-      url: 'https://play.google.com/store/apps/details?id=com.rydon24.driver',
+      url: 'https://play.google.com/store/apps/details?id=com.Redigo.driver',
       type: 'Partner App',
       icon: <Shield className="link-icon" />,
       color: '#2563EB'
@@ -38,13 +38,13 @@ const LinksPage = () => {
       </nav>
 
       <div className="links-banner">
-        <img src={bannerImg} alt="Rydon24 Banner" className="banner-image" />
+        <img src={bannerImg} alt="Redigo Banner" className="banner-image" />
         <div className="banner-gradient"></div>
       </div>
 
       <div className="links-content-wrapper">
         <header className="links-header">
-          <h1 className="links-title">Download <span className="highlight">Rydon24</span></h1>
+          <h1 className="links-title">Download <span className="highlight">Redigo</span></h1>
           <p className="links-tagline">Choose the app that's right for you and start your journey today.</p>
         </header>
 
@@ -86,9 +86,9 @@ const LinksPage = () => {
         </div>
 
         <footer className="links-footer">
-          <p>© 2026 Rydon24. All rights reserved.</p>
+          <p>© 2026 Redigo. All rights reserved.</p>
           <div className="footer-links">
-            <a href="https://rydon24.com" target="_blank" rel="noopener noreferrer">Visit Website</a>
+            <a href="https://Redigo.com" target="_blank" rel="noopener noreferrer">Visit Website</a>
             <span className="dot"></span>
             <a href="/support">Support</a>
           </div>

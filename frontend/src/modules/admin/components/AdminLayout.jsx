@@ -1873,7 +1873,7 @@ const AdminLayout = () => {
                   >
                     <div className="px-5 py-4 border-b border-slate-50 mb-2 bg-slate-50/50 rounded-t-[1.5rem]">
                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Cryptographic Identity</p>
-                       <p className="text-[13px] font-bold text-slate-900 truncate leading-tight">{adminProfile?.email || 'root@rydon24.cloud'}</p>
+                       <p className="text-[13px] font-bold text-slate-900 truncate leading-tight">{adminProfile?.email || 'root@Redigo.cloud'}</p>
                     </div>
                     
                     <div className="p-1 space-y-1">

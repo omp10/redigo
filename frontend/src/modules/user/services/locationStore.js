@@ -1,5 +1,5 @@
-export const LOCATION_STORAGE_KEY = 'rydon24:lastLocation';
-export const LOCATION_UPDATED_EVENT = 'rydon24:location-updated';
+export const LOCATION_STORAGE_KEY = 'Redigo:lastLocation';
+export const LOCATION_UPDATED_EVENT = 'Redigo:location-updated';
 
 export const DEFAULT_LOCATION_LABEL = 'Choose your location';
 export const DEFAULT_LOCATION_COORDS = [78.4867, 17.385];
