@@ -217,10 +217,13 @@ const BusList = () => {
   }, [buses, selectedCompany, showDealsOnly, showHighlyRatedOnly, sortBy]);
 
   const handleSelect = (bus) => {
+    const sanitizedBus = bus ? JSON.parse(JSON.stringify(bus)) : null;
     navigate(`${routePrefix}/bus/details`, {
       state: {
-        ...state,
-        bus,
+        fromCity: state.fromCity || '',
+        toCity: state.toCity || '',
+        date: state.date || '',
+        bus: sanitizedBus,
       },
     });
   };
