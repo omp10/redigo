@@ -213,9 +213,7 @@ const RentalConfirmed = () => {
     duration: duration || 'Hourly',
   });
   const liveElapsedSeconds = activeRentalRide?.assignedAt
-    ? isEndRequestPending && Number(activeRentalRide?.finalElapsedMinutes || 0) > 0
-      ? Number(activeRentalRide.finalElapsedMinutes || 0) * 60
-      : Math.max(1, Math.floor((clockNow - new Date(activeRentalRide.assignedAt || activeRentalRide.createdAt).getTime()) / 1000))
+    ? Math.max(1, Math.floor((clockNow - new Date(activeRentalRide.assignedAt || activeRentalRide.createdAt).getTime()) / 1000))
     : Number(activeRentalRide?.elapsedMinutes || 0) * 60;
   const liveElapsedMinutes = Math.max(1, Math.ceil(liveElapsedSeconds / 60));
 
@@ -231,9 +229,7 @@ const RentalConfirmed = () => {
   );
 
   const liveCharge = activeRentalRide
-    ? isEndRequestPending && Number(activeRentalRide?.finalCharge || 0) > 0
-      ? Number(activeRentalRide.finalCharge || 0)
-      : computeRentalLiveCharge(activeRentalRide, activePricingSummary, liveElapsedSeconds)
+    ? computeRentalLiveCharge(activeRentalRide, activePricingSummary, liveElapsedSeconds)
     : 0;
   const completedCharge = Number(activeRentalRide?.finalCharge || activeRentalRide?.fare || 0);
   const activeVehicleImage = activeRentalRide?.assignedVehicle?.image || activeRentalRide?.vehicle?.image || state.vehicle?.image;

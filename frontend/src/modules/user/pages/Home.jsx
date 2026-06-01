@@ -12,7 +12,7 @@ import CheckUsOutSection from '../components/CheckUsOutSection';
 import BottomNavbar from '../components/BottomNavbar';
 import carIcon from '../../../assets/icons/car.png';
 import bikeIcon from '../../../assets/icons/bike.png';
-import indiaGateRealImg from '@/assets/india_gate_real.png';
+import rajwadaSketchImg from '@/assets/rajwada_sketch.png';
 import autoIcon from '../../../assets/icons/auto.png';
 import deliveryIcon from '../../../assets/icons/Delivery.png';
 import api from '../../../shared/api/axiosInstance';
@@ -536,9 +536,7 @@ const Home = () => {
   const scheduledDateLabel = formatScheduledDateTime(currentRide?.scheduledAt);
   const scheduledCountdown = getScheduledCountdownLabel(currentRide?.scheduledAt, clockNow);
   const rentalElapsedSeconds = serviceType === 'rental' && currentRide?.assignedAt
-    ? String(currentRide?.status || '').toLowerCase() === 'end_requested' && Number(currentRide?.finalElapsedMinutes || 0) > 0
-      ? Number(currentRide.finalElapsedMinutes || 0) * 60
-      : Math.max(1, Math.floor((clockNow - new Date(currentRide.assignedAt).getTime()) / 1000))
+    ? Math.max(1, Math.floor((clockNow - new Date(currentRide.assignedAt).getTime()) / 1000))
     : Number(currentRide?.elapsedMinutes || 0) * 60;
 
   const computeRentalLiveCharge = (ride = {}, elapsedSeconds = 0) => {
@@ -568,9 +566,7 @@ const Home = () => {
   };
 
   const rentalCurrentCharge = serviceType === 'rental'
-    ? String(currentRide?.status || '').toLowerCase() === 'end_requested' && Number(currentRide?.finalCharge || 0) > 0
-      ? Number(currentRide.finalCharge || 0)
-      : computeRentalLiveCharge(currentRide, rentalElapsedSeconds)
+    ? computeRentalLiveCharge(currentRide, rentalElapsedSeconds)
     : Number(currentRide?.fare || 0);
 
   const formatRentalTime = (totalSeconds) => {
@@ -582,7 +578,7 @@ const Home = () => {
 
   const rentalTimerLabel = serviceType === 'rental' ? formatRentalTime(rentalElapsedSeconds) : '';
   const footerIllustrationBg = {
-    backgroundImage: `url(${indiaGateRealImg})`,
+    backgroundImage: `url(${rajwadaSketchImg})`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center bottom',
     backgroundSize: 'cover',
@@ -713,7 +709,7 @@ const Home = () => {
               className="mx-5 overflow-hidden rounded-[32px] border border-white/80 bg-white/70 p-5 shadow-[0_24px_48px_rgba(15,23,42,0.08)] backdrop-blur-2xl relative"
             >
               {/* Radial background glows */}
-              <div className="absolute -right-12 -bottom-12 h-36 w-36 rounded-full bg-orange-200/30 blur-3xl pointer-events-none" />
+              <div className="absolute -right-12 -bottom-12 h-36 w-36 rounded-full bg-emerald-200/20 blur-3xl pointer-events-none" />
               <div className="absolute -left-12 -top-12 h-36 w-36 rounded-full bg-emerald-200/30 blur-3xl pointer-events-none" />
 
               <div className="relative z-10 space-y-4">
@@ -721,10 +717,10 @@ const Home = () => {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
                       {rideStage === 'end_requested' ? 'End Pending' : 'Live Rental'}
                     </span>
                   </div>
@@ -742,7 +738,7 @@ const Home = () => {
                       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                       className="relative h-20 w-full rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100/80 border border-slate-200/40 flex items-center justify-center p-2 shadow-inner overflow-hidden group"
                     >
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.05)_0%,transparent_70%)]" />
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.05)_0%,transparent_70%)]" />
                       <img
                         src={currentRideIcon}
                         alt=""
@@ -776,7 +772,7 @@ const Home = () => {
                         </div>
                         <span className="text-xl font-medium text-slate-300 -translate-y-1 animate-pulse">:</span>
                         <div className="flex flex-col items-center">
-                          <span className="font-mono text-2xl font-bold tracking-tight text-rose-500 leading-none">
+                          <span className="font-mono text-2xl font-bold tracking-tight text-emerald-600 leading-none">
                             {String(rentalS).padStart(2, '0')}
                           </span>
                           <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Sec</span>
@@ -788,13 +784,13 @@ const Home = () => {
                     <div className="space-y-1">
                       <div className="flex justify-between text-[9px] font-medium text-slate-400">
                         <span>Limit: {includedHours} hrs</span>
-                        <span className={isExtraTime ? "text-rose-500 font-semibold" : "text-emerald-600 font-semibold"}>
+                        <span className={isExtraTime ? "text-emerald-700 font-semibold" : "text-emerald-600 font-semibold"}>
                           {isExtraTime ? 'Extra Hours Incurred' : `${progressPercentage.toFixed(0)}% consumed`}
                         </span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/30">
                         <motion.div
-                          className={`h-full rounded-full ${isExtraTime ? 'bg-gradient-to-r from-orange-500 to-rose-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}
+                          className={`h-full rounded-full ${isExtraTime ? 'bg-gradient-to-r from-emerald-500 to-emerald-800' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPercentage}%` }}
                           transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -815,7 +811,7 @@ const Home = () => {
                       </span>
                     </div>
                     {isExtraTime && (
-                      <p className="text-[8px] font-medium text-rose-500">Includes extra hour rates</p>
+                      <p className="text-[8px] font-medium text-emerald-700">Includes extra hour rates</p>
                     )}
                   </div>
 
@@ -854,10 +850,8 @@ const Home = () => {
         <ServiceGrid />
         {showDeferredSections ? (
           <>
-            <LocationMapSection />
-            <ActionsSection />
-            <PromoBanners />
-            <ExplorerSection />
+
+
 
           </>
         ) : (
@@ -877,18 +871,46 @@ const Home = () => {
             <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-[#EEF2F7]/20 via-[#EEF2F7]/5 to-transparent" />
             <div className="relative z-10 flex h-full items-start justify-center px-6 pt-10 text-left">
               <div className="flex max-w-[340px] flex-col items-start px-2 py-2 -translate-x-4">
-                <div className="text-[48px] font-black tracking-[-0.04em] text-[#FFB300] drop-shadow-[0_10px_30px_rgba(255,179,0,0.4)] leading-none">
-                  Redigo
+                <svg viewBox="0 0 220 70" className="w-[180px] h-[58px] -translate-x-1.5 pointer-events-none drop-shadow-[0_8px_16px_rgba(16,185,129,0.12)]">
+                  <style>{`
+                    @import url('https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&display=swap');
+                    @keyframes drawPencil {
+                      0% {
+                        stroke-dashoffset: 1000;
+                        fill: rgba(16, 185, 129, 0);
+                      }
+                      75% {
+                        stroke-dashoffset: 0;
+                        fill: rgba(16, 185, 129, 0);
+                      }
+                      100% {
+                        stroke-dashoffset: 0;
+                        fill: rgba(16, 185, 129, 1);
+                      }
+                    }
+                    .pencil-sketch-text {
+                      font-family: 'Cabin Sketch', cursive, sans-serif;
+                      stroke: #10b981;
+                      stroke-width: 1.5px;
+                      fill: rgba(16, 185, 129, 0);
+                      stroke-dasharray: 1000;
+                      stroke-dashoffset: 1000;
+                      animation: drawPencil 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+                    }
+                  `}</style>
+                  <text x="2" y="52" className="pencil-sketch-text text-[56px] font-bold tracking-tight">
+                    Redigo
+                  </text>
+                </svg>
+                <div className="mt-2 text-[14px] font-sans font-extrabold tracking-tight text-emerald-800">
+                  Your trusted ride partner
                 </div>
-                <div className="mt-2 text-[14px] font-sans italic font-black tracking-[0.04em] text-slate-800">
-                  Your Trusted Journey Partner
-                </div>
-                <div className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Made for Everyone, Crafted for You.
+                <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-600/70 flex items-center gap-1.5">
+                  Simple. Smart. Green.
                   <img
                     src="/flag-in.svg"
                     alt="India"
-                    className="ml-0.5 inline-block h-[2.2em] w-[1.2em] align-[-0.88em]"
+                    className="h-3 w-4 shrink-0"
                     draggable={false}
                   />
                 </div>

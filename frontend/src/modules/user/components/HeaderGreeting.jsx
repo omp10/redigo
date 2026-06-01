@@ -43,14 +43,8 @@ const HeaderGreeting = () => {
             initial={{ opacity: 0, y: -8, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.45, ease: 'easeOut' }}
-            className="relative inline-flex items-center rounded-full border border-white/80 bg-white/90 px-2.5 py-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-md"
+            className="relative inline-flex items-center"
           >
-            <motion.div
-              aria-hidden="true"
-              className="absolute inset-x-3 inset-y-1.5 rounded-full bg-emerald-100/70 blur-md"
-              animate={{ opacity: [0.3, 0.75, 0.3], scale: [0.92, 1.06, 0.92] }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-            />
             {appLogo ? (
               <motion.img
                 key={appLogo}

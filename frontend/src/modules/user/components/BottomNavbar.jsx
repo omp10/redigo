@@ -78,7 +78,7 @@ const BottomNavbar = () => {
                         damping: 32,
                         mass: 1
                       }}
-                      className="absolute -inset-y-2 -inset-x-4 bg-slate-900 rounded-[20px] shadow-[0_8px_20px_rgba(15,23,42,0.25)]"
+                      className="absolute -inset-y-1 -inset-x-3 bg-[linear-gradient(135deg,#10b981_0%,#059669_100%)] rounded-[14px] shadow-[0_6px_14px_rgba(16,185,129,0.25)]"
                     />
                   )}
                 </AnimatePresence>
@@ -107,7 +107,7 @@ const BottomNavbar = () => {
                     <Icon
                       size={21}
                       strokeWidth={isActive ? 2.5 : 2}
-                      className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`}
+                      className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-emerald-500'}`}
                     />
                   )}
                 </motion.div>
@@ -123,7 +123,7 @@ const BottomNavbar = () => {
                     duration: 0.2
                   }}
                   className={`relative z-20 text-[10px] font-bold uppercase tracking-[0.18em] font-sans mt-1 transition-colors duration-300 ${
-                    isActive ? 'text-white' : 'text-slate-500'
+                    isActive ? 'text-white' : 'text-slate-500 group-hover:text-emerald-600'
                   }`}
                 >
                   {label}
