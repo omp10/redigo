@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -7,60 +7,26 @@ import {
   ChevronRight,
   LoaderCircle,
   MapPin,
-  Search,
-  Sparkles,
   Clock,
   Navigation,
   X,
-  ShieldCheck,
-  Star,
-  Info,
-  MapPinned,
-  Check,
   AlertTriangle,
   User,
   ArrowUpDown,
   PhoneCall,
   Briefcase,
-  Compass
+  Compass,
+  Check,
+  MapPinned,
 } from 'lucide-react';
-import { userService } from '../../services/userService';
 import { GoogleMap } from '@react-google-maps/api';
 import { useAppGoogleMapsLoader, HAS_VALID_GOOGLE_MAPS_KEY, INDIA_CENTER } from '../../../admin/utils/googleMaps';
+import { userService } from '../../services/userService';
 import toast from 'react-hot-toast';
 import ujjainTourImg from '@/assets/ujjain_tour.png';
 import offersBannerImg from '@/assets/offers_banner.png';
 
 const normalizeSearchValue = (value) => String(value || '').trim().toLowerCase();
-
-const serializePackageForFlow = (pkg = {}) => ({
-  id: pkg.id || '',
-  serviceLocationId: pkg.serviceLocationId || '',
-  serviceLocationName: pkg.serviceLocationName || '',
-  packageTypeId: pkg.packageTypeId || '',
-  packageTypeName: pkg.packageTypeName || '',
-  destination: pkg.destination || '',
-  availability: pkg.availability || 'available',
-  vehicles: Array.isArray(pkg.vehicles)
-    ? pkg.vehicles.map((vehicle, index) => ({
-      id: vehicle.id || `${pkg.id || 'pkg'}:${vehicle.vehicleTypeId || index}`,
-      vehicleTypeId: vehicle.vehicleTypeId || '',
-      vehicleName: vehicle.vehicleName || 'Vehicle',
-      capacity: Number(vehicle.capacity || 0),
-      icon: vehicle.icon || '',
-      iconType: vehicle.iconType || vehicle.vehicleName || 'car',
-      dispatchType: String(vehicle.dispatchType || 'normal').trim().toLowerCase(),
-      supportsBidding: ['bidding', 'both'].includes(String(vehicle.dispatchType || 'normal').trim().toLowerCase()),
-      basePrice: Number(vehicle.basePrice || 0),
-      freeDistance: Number(vehicle.freeDistance || 0),
-      distancePrice: Number(vehicle.distancePrice || 0),
-      freeTime: Number(vehicle.freeTime || 0),
-      timePrice: Number(vehicle.timePrice || 0),
-      serviceTax: Number(vehicle.serviceTax || 0),
-      cancellationFee: Number(vehicle.cancellationFee || 0),
-    }))
-    : [],
-});
 
 const formatDateToDDMMYYYY = (dateStr) => {
   if (!dateStr) return '';
@@ -77,111 +43,268 @@ const formatTimeTo12Hour = (timeStr) => {
   return `${String(displayHour).padStart(2, '0')}:${minutes} ${ampm}`;
 };
 
+const unwrapResults = (response) => {
+  const payload = response?.data?.data || response?.data || response;
+  return payload?.results || payload?.service_locations || (Array.isArray(payload) ? payload : []);
+};
+
+const getServiceLocationLabel = (item = {}) =>
+  String(item?.service_location_name || item?.name || item?.city || '').trim();
+
+const resolveServiceLocationId = (item = {}) => String(item?._id || item?.id || '').trim();
+
+const extractCityName = (results = []) => {
+  const components = Array.isArray(results?.[0]?.address_components) ? results[0].address_components : [];
+  const cityComponent = components.find((component) =>
+    component.types.includes('locality')
+    || component.types.includes('administrative_area_level_2')
+    || component.types.includes('administrative_area_level_1'),
+  );
+  return String(cityComponent?.long_name || '').trim();
+};
+
+const findMatchingServiceLocation = (serviceLocations = [], cityName = '') => {
+  const normalizedCity = normalizeSearchValue(cityName);
+  if (!normalizedCity) {
+    return null;
+  }
+
+  return serviceLocations.find((item) => normalizeSearchValue(getServiceLocationLabel(item)) === normalizedCity)
+    || serviceLocations.find((item) => normalizeSearchValue(getServiceLocationLabel(item)).includes(normalizedCity))
+    || null;
+};
+
+const buildDestinationResult = (prediction = {}) => ({
+  title: prediction.structured_formatting?.main_text || prediction.description || '',
+  address: prediction.description || '',
+  placeId: prediction.place_id || '',
+});
+
 const IntercityHome = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const routePrefix = location.pathname.startsWith('/taxi/user') ? '/taxi/user' : '';
+  const { isLoaded } = useAppGoogleMapsLoader();
 
-  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [serviceLocations, setServiceLocations] = useState([]);
 
-  // Locations State
   const [fromCity, setFromCity] = useState('');
+  const [serviceLocationId, setServiceLocationId] = useState('');
   const [pickupAddress, setPickupAddress] = useState('');
   const [pickupCoords, setPickupCoords] = useState(null);
 
   const [toCitySearch, setToCitySearch] = useState('');
-  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [selectedDestination, setSelectedDestination] = useState(null);
   const [isToFocused, setIsToFocused] = useState(false);
+  const [remoteResults, setRemoteResults] = useState([]);
+  const [isSearchingDestinations, setIsSearchingDestinations] = useState(false);
 
-  // Date and Time State
   const [travelDate, setTravelDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-
   const [travelTime, setTravelTime] = useState(() => {
-    const now = new Date(Date.now() + 60 * 60 * 1000); // Default to 1 hour from now
-    return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const now = new Date(Date.now() + 60 * 60 * 1000);
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   });
-
   const [tripType, setTripType] = useState('One Way');
 
-  // Map Picker State
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [mapCenter, setMapCenter] = useState(INDIA_CENTER);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
   const mapInstanceRef = useRef(null);
   const lastCenterRef = useRef(INDIA_CENTER);
+  const geocoderRef = useRef(null);
+  const autocompleteServiceRef = useRef(null);
+  const placesServiceRef = useRef(null);
+  const autocompleteSessionTokenRef = useRef(null);
+  const latestSearchRef = useRef(0);
+  const searchCacheRef = useRef(new Map());
   const dateTimeInputRef = useRef(null);
 
-  const { isLoaded } = useAppGoogleMapsLoader();
-
   useEffect(() => {
-    const loadPackages = async () => {
+    let active = true;
+
+    const loadInitialData = async () => {
       try {
         setLoading(true);
-        const response = await userService.getIntercityPackages();
-        const results = Array.isArray(response?.results) ? response.results : [];
-        setPackages(results);
-
-        // Initial setup for fromCity if results exist
-        if (results.length > 0 && !fromCity && results[0]?.serviceLocationName) {
-          setFromCity(results[0].serviceLocationName);
+        const response = await userService.getServiceLocations();
+        if (!active) {
+          return;
         }
-      } catch (err) {
-        setError('Could not load intercity packages');
+
+        const results = unwrapResults(response);
+        setServiceLocations(Array.isArray(results) ? results : []);
+      } catch {
+        if (active) {
+          setServiceLocations([]);
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
-    loadPackages();
+
+    loadInitialData();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Set current location on mount if allowed
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setMapCenter(coords);
-          setPickupCoords([coords.lng, coords.lat]);
-          reverseGeocode(coords);
-        },
-        null,
-        { enableHighAccuracy: true }
-      );
+    if (!isLoaded || !window.google?.maps?.places?.AutocompleteService) {
+      return;
     }
+
+    autocompleteServiceRef.current = autocompleteServiceRef.current || new window.google.maps.places.AutocompleteService();
+    placesServiceRef.current = placesServiceRef.current || new window.google.maps.places.PlacesService(document.createElement('div'));
+    autocompleteSessionTokenRef.current = autocompleteSessionTokenRef.current
+      || new window.google.maps.places.AutocompleteSessionToken();
   }, [isLoaded]);
 
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setMapCenter(coords);
+        setPickupCoords([coords.lng, coords.lat]);
+        reverseGeocode(coords);
+      },
+      null,
+      { enableHighAccuracy: true },
+    );
+  }, [isLoaded]);
+
+  const getAutocompleteSessionToken = () => {
+    if (!window.google?.maps?.places?.AutocompleteSessionToken) {
+      return null;
+    }
+
+    if (!autocompleteSessionTokenRef.current) {
+      autocompleteSessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    }
+
+    return autocompleteSessionTokenRef.current;
+  };
+
+  const resetAutocompleteSessionToken = () => {
+    if (!window.google?.maps?.places?.AutocompleteSessionToken) {
+      autocompleteSessionTokenRef.current = null;
+      return;
+    }
+
+    autocompleteSessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+  };
+
+  const getGeocoder = () => {
+    if (!window.google?.maps?.Geocoder) {
+      return null;
+    }
+
+    if (!geocoderRef.current) {
+      geocoderRef.current = new window.google.maps.Geocoder();
+    }
+
+    return geocoderRef.current;
+  };
+
   const reverseGeocode = (coords) => {
-    if (!window.google?.maps?.Geocoder) return;
+    const geocoder = getGeocoder();
+    if (!geocoder) return;
+
     setIsGeocoding(true);
-    const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ location: coords }, (results, status) => {
       setIsGeocoding(false);
       if (status === 'OK' && results?.[0]) {
         const address = results[0].formatted_address;
-        setPickupAddress(address);
+        const detectedCity = extractCityName(results);
+        const matchedLocation = findMatchingServiceLocation(serviceLocations, detectedCity);
 
-        // Find city name to filter packages
-        const cityObj = results[0].address_components.find(c =>
-          c.types.includes('locality') || c.types.includes('administrative_area_level_2')
-        );
-        if (cityObj) {
-          const cityName = cityObj.long_name;
-          // Check if this city exists in our packages
-          const matched = packages.find(p => p.serviceLocationName.toLowerCase() === cityName.toLowerCase());
-          if (matched) {
-            setFromCity(matched.serviceLocationName);
-          }
+        setPickupAddress(address);
+        if (matchedLocation) {
+          setFromCity(getServiceLocationLabel(matchedLocation));
+          setServiceLocationId(resolveServiceLocationId(matchedLocation));
+          return;
         }
+
+        setFromCity(detectedCity || fromCity);
+        return;
       }
+
+      setPickupAddress(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
     });
   };
+
+  useEffect(() => {
+    if (!pickupAddress || !serviceLocations.length || serviceLocationId) {
+      return;
+    }
+
+    const matchedLocation = findMatchingServiceLocation(serviceLocations, fromCity || pickupAddress);
+    if (matchedLocation) {
+      setFromCity(getServiceLocationLabel(matchedLocation));
+      setServiceLocationId(resolveServiceLocationId(matchedLocation));
+    }
+  }, [fromCity, pickupAddress, serviceLocationId, serviceLocations]);
+
+  useEffect(() => {
+    const query = toCitySearch.trim();
+    if (!query || query.length < 3 || !autocompleteServiceRef.current) {
+      setRemoteResults([]);
+      setIsSearchingDestinations(false);
+      return;
+    }
+
+    const normalizedQuery = query.toLowerCase();
+    const cached = searchCacheRef.current.get(normalizedQuery);
+    if (cached) {
+      setRemoteResults(cached);
+      setIsSearchingDestinations(false);
+      return;
+    }
+
+    const requestId = latestSearchRef.current + 1;
+    latestSearchRef.current = requestId;
+    setIsSearchingDestinations(true);
+
+    const timeoutId = window.setTimeout(() => {
+      autocompleteServiceRef.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'in' },
+          sessionToken: getAutocompleteSessionToken(),
+          types: ['geocode'],
+        },
+        (predictions = [], status) => {
+          if (latestSearchRef.current !== requestId) {
+            return;
+          }
+
+          const nextResults = status === 'OK'
+            ? predictions.slice(0, 6).map(buildDestinationResult)
+            : [];
+
+          searchCacheRef.current.set(normalizedQuery, nextResults);
+          setRemoteResults(nextResults);
+          setIsSearchingDestinations(false);
+        },
+      );
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [toCitySearch]);
 
   const handleMapIdle = () => {
     if (!mapInstanceRef.current || !window.google?.maps?.Geocoder) return;
@@ -215,57 +338,38 @@ const IntercityHome = () => {
         }
       },
       () => setIsLocating(false),
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true },
     );
   };
 
-  const filteredPackages = useMemo(() => {
-    const query = normalizeSearchValue(toCitySearch);
-
-    if (query) {
-      return packages.filter((pkg) =>
-        normalizeSearchValue(pkg.destination).includes(query) ||
-        normalizeSearchValue(pkg.packageTypeName).includes(query) ||
-        normalizeSearchValue(pkg.serviceLocationName).includes(query)
-      );
-    }
-
-    return packages;
-  }, [packages, toCitySearch]);
-
   const handleSwapLocations = () => {
-    if (!pickupAddress && !toCitySearch && !selectedPackage) return;
+    if (!pickupAddress && !toCitySearch) return;
 
-    const prevPickupAddress = pickupAddress;
-    const prevFromCity = fromCity;
+    const previousPickup = pickupAddress;
+    const previousPickupCoords = pickupCoords;
+    const previousFromCity = fromCity;
+    const previousServiceLocationId = serviceLocationId;
 
-    const newPickup = selectedPackage?.destination || toCitySearch || '';
-    setPickupAddress(newPickup);
-    setPickupCoords(null);
+    setPickupAddress(selectedDestination?.address || toCitySearch || '');
+    setPickupCoords(selectedDestination?.coords || null);
+    setFromCity(selectedDestination?.title || toCitySearch || '');
+    setServiceLocationId('');
 
-    const newDest = prevPickupAddress || prevFromCity || '';
-    setToCitySearch(newDest);
-
-    // Try to find a package that matches this reverse route
-    const reversedPkg = packages.find(
-      (pkg) =>
-        pkg.serviceLocationName.toLowerCase().trim() === newPickup.toLowerCase().trim() &&
-        pkg.destination.toLowerCase().trim() === newDest.toLowerCase().trim()
-    );
-
-    if (reversedPkg) {
-      setSelectedPackage(reversedPkg);
-      setFromCity(reversedPkg.serviceLocationName);
+    setToCitySearch(previousPickup || previousFromCity || '');
+    if (previousPickup) {
+      setSelectedDestination({
+        title: previousFromCity || previousPickup,
+        address: previousPickup,
+        coords: previousPickupCoords,
+        serviceLocationId: previousServiceLocationId,
+      });
     } else {
-      setSelectedPackage(null);
-      if (newPickup) {
-        setFromCity(newPickup);
-      }
+      setSelectedDestination(null);
     }
   };
 
   const handleDateTimeChange = (e) => {
-    const val = e.target.value; // YYYY-MM-DDTHH:MM
+    const val = e.target.value;
     if (val) {
       const [d, t] = val.split('T');
       setTravelDate(d);
@@ -284,55 +388,133 @@ const IntercityHome = () => {
     }
   };
 
-  const handleExploreCabs = () => {
+  const resolveDestinationSelection = async () => {
+    if (selectedDestination?.coords && selectedDestination?.address) {
+      return selectedDestination;
+    }
+
+    const query = String(toCitySearch || '').trim();
+    if (!query) {
+      return null;
+    }
+
+    const geocoder = getGeocoder();
+    if (!geocoder) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      geocoder.geocode({ address: query }, (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const locationValue = results[0].geometry.location;
+          resolve({
+            title: results[0].address_components?.[0]?.long_name || query,
+            address: results[0].formatted_address || query,
+            coords: [locationValue.lng(), locationValue.lat()],
+          });
+          return;
+        }
+
+        resolve(null);
+      });
+    });
+  };
+
+  const handleDestinationSelect = async (result) => {
+    if (!result) return;
+
+    const placesService = placesServiceRef.current;
+    const geocoder = getGeocoder();
+
+    if (result.placeId && placesService) {
+      placesService.getDetails(
+        {
+          placeId: result.placeId,
+          sessionToken: getAutocompleteSessionToken(),
+          fields: ['formatted_address', 'geometry.location', 'name'],
+        },
+        (place, status) => {
+          if (status === 'OK' && place?.geometry?.location) {
+            const nextDestination = {
+              title: result.title || place.name || place.formatted_address || '',
+              address: place.formatted_address || result.address || result.title || '',
+              coords: [place.geometry.location.lng(), place.geometry.location.lat()],
+            };
+
+            setSelectedDestination(nextDestination);
+            setToCitySearch(nextDestination.address);
+            setIsToFocused(false);
+            resetAutocompleteSessionToken();
+            return;
+          }
+
+          if (result.placeId && geocoder) {
+            geocoder.geocode({ placeId: result.placeId }, (results, geocodeStatus) => {
+              if (geocodeStatus === 'OK' && results?.[0]?.geometry?.location) {
+                const nextDestination = {
+                  title: result.title || results[0].formatted_address || '',
+                  address: results[0].formatted_address || result.address || result.title || '',
+                  coords: [results[0].geometry.location.lng(), results[0].geometry.location.lat()],
+                };
+
+                setSelectedDestination(nextDestination);
+                setToCitySearch(nextDestination.address);
+                setIsToFocused(false);
+                resetAutocompleteSessionToken();
+              }
+            });
+          }
+        },
+      );
+      return;
+    }
+
+    setSelectedDestination(result);
+    setToCitySearch(result.address || result.title || '');
+    setIsToFocused(false);
+    resetAutocompleteSessionToken();
+  };
+
+  const handleExploreCabs = async () => {
     if (!pickupAddress) {
-      toast.error('Please set your Pickup Location');
+      toast.error('Please set your pickup location');
       setShowMapPicker(true);
       return;
     }
 
-    if (!selectedPackage) {
-      // Check if we can auto-match the current drop search query to a package
-      const match = packages.find(p => p.destination.toLowerCase().trim() === toCitySearch.toLowerCase().trim());
-      if (match) {
-        setSelectedPackage(match);
-        proceedWithPackage(match);
-      } else {
-        toast.error('Please select a valid Drop Location from the suggestions');
-        setIsToFocused(true);
-      }
+    const destination = await resolveDestinationSelection();
+    if (!destination?.coords) {
+      toast.error('Please choose a valid destination from the suggestions');
+      setIsToFocused(true);
       return;
     }
 
-    proceedWithPackage(selectedPackage);
-  };
-
-  const proceedWithPackage = (pkg) => {
-    const flowPackage = serializePackageForFlow(pkg);
-    const effectiveFromCity = flowPackage.serviceLocationName || fromCity || 'Pickup City';
     const combinedScheduledAt = new Date(`${travelDate}T${travelTime}`);
-
     navigate(`${routePrefix}/intercity/vehicle`, {
       state: {
-        fromCity: effectiveFromCity,
-        toCity: flowPackage.destination,
+        fromCity: fromCity || 'Pickup City',
+        toCity: destination.title || destination.address || toCitySearch,
+        dropAddress: destination.address || destination.title || toCitySearch,
+        dropCoords: destination.coords,
         tripType,
         rideMode: 'schedule',
         date: travelDate,
         scheduledAt: combinedScheduledAt.toISOString(),
-        selectedPackages: [flowPackage],
         pickupAddress,
-        pickupCoords
-      }
+        pickupCoords,
+        serviceLocationId,
+        serviceLocationName: fromCity || '',
+      },
     });
   };
 
   const displayDateStr = formatDateToDDMMYYYY(travelDate);
   const displayTimeStr = formatTimeTo12Hour(travelTime);
 
+  const destinationSuggestions = useMemo(() => remoteResults, [remoteResults]);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] max-w-lg mx-auto font-sans relative overflow-x-hidden flex flex-col pb-28">
-      {/* Map Picker Modal */}
       <AnimatePresence>
         {showMapPicker && (
           <motion.div
@@ -383,7 +565,6 @@ const IntercityHome = () => {
                 </div>
               )}
 
-              {/* Pin Overlay */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[100%] pointer-events-none z-10">
                 <motion.div
                   animate={isDragging || isGeocoding ? { y: -15 } : { y: 0 }}
@@ -410,8 +591,10 @@ const IntercityHome = () => {
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  const center = mapInstanceRef.current.getCenter();
-                  setPickupCoords([center.lng(), center.lat()]);
+                  const center = mapInstanceRef.current?.getCenter?.();
+                  if (center) {
+                    setPickupCoords([center.lng(), center.lat()]);
+                  }
                   setShowMapPicker(false);
                 }}
                 disabled={isGeocoding}
@@ -425,7 +608,6 @@ const IntercityHome = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white border-b border-slate-100 z-30 shadow-sm">
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -440,11 +622,8 @@ const IntercityHome = () => {
         </div>
       </header>
 
-      {/* Main Container Card */}
       <div className="px-5 pt-4">
         <div className="bg-white rounded-[28px] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-slate-100 relative">
-
-          {/* Subtitle Header */}
           <div className="flex items-center justify-center gap-3 mb-6">
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-slate-200" />
             <span className="text-[10px] font-extrabold text-[#258cc4] tracking-[0.15em] uppercase whitespace-nowrap">
@@ -453,12 +632,10 @@ const IntercityHome = () => {
             <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-slate-200" />
           </div>
 
-          {/* Trip Type Toggle */}
           <div className="flex border border-slate-200 rounded-xl p-1 mb-5 bg-white">
             <button
               onClick={() => setTripType('One Way')}
-              className={`flex-1 py-3.5 rounded-lg text-center transition-all duration-200 flex flex-col items-center justify-center ${tripType === 'One Way' ? 'bg-[#20A354] text-white shadow-sm font-bold' : 'text-slate-800 hover:bg-slate-50'
-                }`}
+              className={`flex-1 py-3.5 rounded-lg text-center transition-all duration-200 flex flex-col items-center justify-center ${tripType === 'One Way' ? 'bg-[#20A354] text-white shadow-sm font-bold' : 'text-slate-800 hover:bg-slate-50'}`}
             >
               <span className="text-[13px] font-extrabold tracking-wide uppercase leading-tight">One Way</span>
               <span className={`text-[9px] mt-0.5 leading-none opacity-85 ${tripType === 'One Way' ? 'text-white' : 'text-slate-500'}`}>
@@ -467,8 +644,7 @@ const IntercityHome = () => {
             </button>
             <button
               onClick={() => setTripType('Round Trip')}
-              className={`flex-1 py-3.5 rounded-lg text-center transition-all duration-200 flex flex-col items-center justify-center ${tripType === 'Round Trip' ? 'bg-[#20A354] text-white shadow-sm font-bold' : 'text-slate-800 hover:bg-slate-50'
-                }`}
+              className={`flex-1 py-3.5 rounded-lg text-center transition-all duration-200 flex flex-col items-center justify-center ${tripType === 'Round Trip' ? 'bg-[#20A354] text-white shadow-sm font-bold' : 'text-slate-800 hover:bg-slate-50'}`}
             >
               <span className="text-[13px] font-extrabold tracking-wide uppercase leading-tight">Round Trip</span>
               <span className={`text-[9px] mt-0.5 leading-none opacity-85 ${tripType === 'Round Trip' ? 'text-white' : 'text-slate-500'}`}>
@@ -477,10 +653,7 @@ const IntercityHome = () => {
             </button>
           </div>
 
-          {/* Locations Fields Box */}
           <div className="relative border border-slate-200 rounded-2xl bg-[#f0f6fa] p-0.5 overflow-visible">
-
-            {/* FROM Field */}
             <div
               onClick={() => setShowMapPicker(true)}
               className="px-5 py-4 flex items-center gap-4 cursor-pointer hover:bg-[#e6f0f5] rounded-t-2xl transition-colors border-b border-slate-200/80"
@@ -493,10 +666,14 @@ const IntercityHome = () => {
                 <p className="text-[15px] font-bold text-slate-800 truncate leading-snug">
                   {pickupAddress || 'Enter Pickup Location'}
                 </p>
+                {fromCity ? (
+                  <p className="text-[11px] font-semibold text-[#258cc4] mt-1 truncate">
+                    {fromCity}{serviceLocationId ? ' service area' : ''}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            {/* SWAP Button */}
             <button
               onClick={handleSwapLocations}
               type="button"
@@ -505,7 +682,6 @@ const IntercityHome = () => {
               <ArrowUpDown size={15} className="text-[#258cc4]" />
             </button>
 
-            {/* TO Field */}
             <div className="px-5 py-4 flex items-center gap-4 rounded-b-2xl relative">
               <div className="w-6 h-6 shrink-0 flex items-center justify-center text-[#258cc4]">
                 <MapPin size={20} />
@@ -514,13 +690,11 @@ const IntercityHome = () => {
                 <p className="text-[9px] font-extrabold text-slate-400 tracking-wider uppercase leading-none mb-1">TO</p>
                 <input
                   type="text"
-                  placeholder="Enter Drop Location"
+                  placeholder="Search destination"
                   value={toCitySearch}
                   onChange={(e) => {
                     setToCitySearch(e.target.value);
-                    if (selectedPackage && selectedPackage.destination !== e.target.value) {
-                      setSelectedPackage(null);
-                    }
+                    setSelectedDestination(null);
                   }}
                   onFocus={() => setIsToFocused(true)}
                   className="w-full bg-transparent border-0 outline-none p-0 font-bold text-[15px] text-slate-800 placeholder:text-slate-400 leading-snug mt-0.5"
@@ -531,7 +705,7 @@ const IntercityHome = () => {
                   type="button"
                   onClick={() => {
                     setToCitySearch('');
-                    setSelectedPackage(null);
+                    setSelectedDestination(null);
                   }}
                   className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200/50"
                 >
@@ -539,11 +713,9 @@ const IntercityHome = () => {
                 </button>
               )}
 
-              {/* Suggestions Dropdown Overlay */}
               <AnimatePresence>
                 {isToFocused && (
                   <>
-                    {/* Click Outside Handler Backdrop */}
                     <div className="fixed inset-0 z-40" onClick={() => setIsToFocused(false)} />
 
                     <motion.div
@@ -555,41 +727,38 @@ const IntercityHome = () => {
                       {loading ? (
                         <div className="p-8 flex items-center justify-center gap-2.5 text-slate-400">
                           <LoaderCircle size={18} className="animate-spin text-[#20A354]" />
-                          <span className="text-[13px] font-medium">Loading routes...</span>
+                          <span className="text-[13px] font-medium">Loading locations...</span>
                         </div>
-                      ) : filteredPackages.length > 0 ? (
-                        filteredPackages.map((pkg) => (
+                      ) : isSearchingDestinations ? (
+                        <div className="p-8 flex items-center justify-center gap-2.5 text-slate-400">
+                          <LoaderCircle size={18} className="animate-spin text-[#20A354]" />
+                          <span className="text-[13px] font-medium">Searching destinations...</span>
+                        </div>
+                      ) : destinationSuggestions.length > 0 ? (
+                        destinationSuggestions.map((result, index) => (
                           <button
-                            key={pkg.id}
+                            key={`${result.placeId || result.address || result.title}-${index}`}
                             type="button"
-                            onClick={() => {
-                              setSelectedPackage(pkg);
-                              setToCitySearch(pkg.destination);
-                              setFromCity(pkg.serviceLocationName);
-                              setIsToFocused(false);
-                            }}
+                            onClick={() => handleDestinationSelect(result)}
                             className="w-full px-5 py-3.5 text-left hover:bg-slate-50 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors group"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                                From {pkg.serviceLocationName}
-                              </p>
                               <p className="text-[14px] font-black text-slate-800 group-hover:text-[#258cc4] transition-colors">
-                                To {pkg.destination}
+                                {result.title}
+                              </p>
+                              <p className="text-[11px] font-medium text-slate-500 mt-1 truncate">
+                                {result.address}
                               </p>
                             </div>
-                            <div className="text-right pl-3">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Starts from</p>
-                              <p className="text-[14px] font-black text-slate-900 group-hover:text-[#258cc4]">
-                                ₹{pkg.vehicles?.[0]?.basePrice || '---'}
-                              </p>
-                            </div>
+                            <ChevronRight size={16} className="text-slate-300 shrink-0 ml-3" />
                           </button>
                         ))
                       ) : (
                         <div className="p-8 text-center text-slate-400">
-                          <p className="text-[13px] font-bold">No routes matching query</p>
-                          <p className="text-[11px] mt-0.5">Check spelling or try a different city</p>
+                          <p className="text-[13px] font-bold">
+                            {toCitySearch.trim().length < 3 ? 'Type at least 3 characters' : 'No destinations matching query'}
+                          </p>
+                          <p className="text-[11px] mt-0.5">Search for any city, station, hotel, or landmark</p>
                         </div>
                       )}
                     </motion.div>
@@ -599,7 +768,6 @@ const IntercityHome = () => {
             </div>
           </div>
 
-          {/* TRIP START Picker */}
           <div
             onClick={triggerDateTimePicker}
             className="mt-4 p-4 rounded-2xl bg-[#ebf5fb] border border-[#d5e8f2] flex items-center gap-4 cursor-pointer hover:bg-[#d9ecf6] transition-colors group relative"
@@ -615,8 +783,6 @@ const IntercityHome = () => {
               </div>
             </div>
             <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-
-            {/* Hidden Native Picker */}
             <input
               ref={dateTimeInputRef}
               type="datetime-local"
@@ -627,7 +793,6 @@ const IntercityHome = () => {
             />
           </div>
 
-          {/* EXPLORE CABS Button */}
           <button
             onClick={handleExploreCabs}
             type="button"
@@ -635,15 +800,11 @@ const IntercityHome = () => {
           >
             EXPLORE CABS
           </button>
-
         </div>
       </div>
 
-      {/* Horizontal Scroll Banners */}
       <div className="mt-6">
         <div className="flex gap-4 overflow-x-auto px-5 py-2 scrollbar-hide">
-
-          {/* Banner 1: Ujjain & Mahakaleshwar Tour */}
           <div className="w-[280px] shrink-0 h-[140px] rounded-2xl overflow-hidden relative shadow-md group">
             <img
               src={ujjainTourImg}
@@ -652,7 +813,7 @@ const IntercityHome = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex flex-col justify-end p-4">
               <span className="self-start bg-black/75 border border-amber-400/40 text-amber-400 text-[8px] font-extrabold px-2 py-0.5 rounded-full tracking-wider uppercase mb-1">
-                ★ Exclusive ★
+                Exclusive
               </span>
               <h4 className="text-white text-[15px] font-black uppercase tracking-tight leading-tight">
                 Ujjain & Mahakaleshwar Tour
@@ -660,7 +821,6 @@ const IntercityHome = () => {
             </div>
           </div>
 
-          {/* Banner 2: Offers */}
           <div className="w-[280px] shrink-0 h-[140px] rounded-2xl overflow-hidden relative shadow-md group">
             <img
               src={offersBannerImg}
@@ -676,11 +836,9 @@ const IntercityHome = () => {
               </h4>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Travel Expert CTA Banner */}
       <div className="px-5 mt-6">
         <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl flex items-center justify-between shadow-sm">
           <div className="min-w-0 flex-1 pr-3">
@@ -699,34 +857,23 @@ const IntercityHome = () => {
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-slate-200 grid grid-cols-3 h-16 items-center z-40 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
-
-        {/* ONE WAY */}
         <button
-          onClick={() => {
-            setTripType('One Way');
-          }}
-          className={`flex flex-col items-center justify-center h-full border-r border-slate-100 transition-colors ${tripType === 'One Way' ? 'bg-[#20A354] text-white font-extrabold' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+          onClick={() => setTripType('One Way')}
+          className={`flex flex-col items-center justify-center h-full border-r border-slate-100 transition-colors ${tripType === 'One Way' ? 'bg-[#20A354] text-white font-extrabold' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <Compass size={18} strokeWidth={2.5} className="mb-0.5" />
           <span className="text-[9px] tracking-wide uppercase font-extrabold">One Way</span>
         </button>
 
-        {/* ROUND TRIP */}
         <button
-          onClick={() => {
-            setTripType('Round Trip');
-          }}
-          className={`flex flex-col items-center justify-center h-full border-r border-slate-100 transition-colors ${tripType === 'Round Trip' ? 'bg-[#20A354] text-white font-extrabold' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+          onClick={() => setTripType('Round Trip')}
+          className={`flex flex-col items-center justify-center h-full border-r border-slate-100 transition-colors ${tripType === 'Round Trip' ? 'bg-[#20A354] text-white font-extrabold' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <Briefcase size={18} strokeWidth={2.5} className="mb-0.5" />
           <span className="text-[9px] tracking-wide uppercase font-extrabold">Round Trip</span>
         </button>
 
-        {/* LOCAL */}
         <button
           onClick={() => navigate(`${routePrefix}/rental`)}
           className="flex flex-col items-center justify-center h-full border-r border-slate-100 text-slate-500 hover:bg-slate-50 transition-colors"
@@ -734,7 +881,6 @@ const IntercityHome = () => {
           <Clock size={18} strokeWidth={2.5} className="mb-0.5" />
           <span className="text-[9px] tracking-wide uppercase font-extrabold">Local</span>
         </button>
-
       </nav>
     </div>
   );

@@ -39,9 +39,9 @@ const IntercityDetails = () => {
   const { fromCity, toCity, vehicle } = state;
 
   const [pickup, setPickup] = useState(state.pickupAddress || '');
-  const [drop, setDrop] = useState('');
+  const [drop, setDrop] = useState(state.dropAddress || state.toCity || '');
   const [pickupCoords, setPickupCoords] = useState(state.pickupCoords || null);
-  const [dropCoords, setDropCoords] = useState(null);
+  const [dropCoords, setDropCoords] = useState(state.dropCoords || null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [activeMapField, setActiveMapField] = useState('pickup');
   const [mapCenter, setMapCenter] = useState(INDIA_CENTER);
