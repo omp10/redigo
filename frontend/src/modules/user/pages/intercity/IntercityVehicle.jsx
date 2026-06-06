@@ -146,6 +146,10 @@ const matchesTransportType = (rule, transportType) => {
   const normalizedRuleTransport = String(rule?.transport_type || 'taxi').trim().toLowerCase();
   const normalizedTransportType = String(transportType || 'taxi').trim().toLowerCase() || 'taxi';
 
+  if (normalizedTransportType === 'both') {
+    return normalizedRuleTransport === 'taxi' || normalizedRuleTransport === 'both';
+  }
+
   return normalizedRuleTransport === normalizedTransportType || normalizedRuleTransport === 'both';
 };
 
