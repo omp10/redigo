@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Wallet, Bell, Shield, LogOut, ChevronRight, HelpCircle, FileText,
   MapPin, Star, Package, Wrench, Gift, Trash2, Check, BusFront, 
-  Settings, CreditCard, Heart, Map, MessageSquare, History, Phone
+  Settings, CreditCard, Heart, Map, MessageSquare, History, Phone,
+  Award, Sparkles
 } from 'lucide-react';
 import BottomNavbar from '../components/BottomNavbar';
 import { clearLocalUserSession, getLocalUserToken, userAuthService } from '../services/authService';
@@ -69,6 +70,7 @@ const Profile = () => {
     name: '',
     phone: '',
     profileImage: '',
+    loyaltyPoints: 0,
     stats: {
       trips: 0,
       rating: 4.9,
@@ -150,11 +152,18 @@ const Profile = () => {
           stored?.rating,
           4.9,
         );
+        const dynamicLoyaltyPoints = pickNumber(
+          user.loyaltyPoints,
+          user.loyalty_points,
+          stored?.loyaltyPoints,
+          150,
+        );
         
         setProfile({
           name: user.name || stored?.name || 'User',
           phone: user.phone || stored?.phone || '',
           profileImage: user.profileImage || user.profile_image || stored?.profileImage || '',
+          loyaltyPoints: dynamicLoyaltyPoints,
           stats: {
             trips: dynamicTripCount,
             rating: dynamicRating,
@@ -167,6 +176,7 @@ const Profile = () => {
           walletBalance: dynamicWalletBalance,
           totalRides: dynamicTripCount,
           rating: dynamicRating,
+          loyaltyPoints: dynamicLoyaltyPoints,
         }));
       } catch (err) {
         console.error('Failed to load profile', err);
@@ -295,6 +305,56 @@ const Profile = () => {
           animate="visible"
           className="px-6 space-y-8"
         >
+          {/* Loyalty Club Premium Widget */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <h3 className="font-sans text-[12px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">
+              Loyalty Club
+            </h3>
+            
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 p-6 text-white shadow-xl shadow-emerald-600/20">
+              {/* Decorative elements */}
+              <div className="absolute top-[-20%] right-[-10%] h-32 w-32 bg-white/10 rounded-full blur-xl" />
+              <div className="absolute bottom-[-20%] left-[-10%] h-24 w-24 bg-white/5 rounded-full blur-lg" />
+              
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0">
+                    <Award size={28} className="text-white" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold tracking-wider text-emerald-100 uppercase opacity-90">RediGo Emerald Member</p>
+                    <h4 className="font-sans text-[26px] font-extrabold tracking-tight mt-0.5">
+                      {profile.loyaltyPoints} <span className="text-sm font-bold text-emerald-100">Points</span>
+                    </h4>
+                  </div>
+                </div>
+                
+                <MotionButton
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/taxi/user/referral')}
+                  className="px-4 py-2 rounded-xl bg-white text-emerald-600 font-extrabold text-[13px] shadow-md hover:bg-emerald-50 transition-all"
+                >
+                  Redeem
+                </MotionButton>
+              </div>
+
+              {/* Progress bar info */}
+              <div className="relative z-10 mt-6 pt-5 border-t border-white/10">
+                <div className="flex justify-between items-center text-[12px] font-semibold text-white/90">
+                  <span className="flex items-center gap-1">
+                    <Sparkles size={12} className="text-emerald-200 fill-emerald-200 animate-pulse" />
+                    50 points to next reward
+                  </span>
+                  <span>75% complete</span>
+                </div>
+                <div className="w-full h-2 bg-white/20 rounded-full mt-2.5 overflow-hidden">
+                  <div className="h-full bg-white rounded-full" style={{ width: '75%' }} />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {menuSections.map((section, sIdx) => (
             <motion.div key={sIdx} variants={itemVariants} className="space-y-4">
               <h3 className="font-sans text-[12px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">

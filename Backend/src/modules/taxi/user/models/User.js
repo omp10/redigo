@@ -160,6 +160,11 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    loyaltyPoints: {
+      type: Number,
+      default: 150,
+      min: 0,
+    },
     referredRideCompletionCount: {
       type: Number,
       default: 0,

@@ -70,6 +70,7 @@ const toUserPayload = (user) => ({
   phone: user.phone || '',
   email: user.email || '',
   gender: user.gender || '',
+  loyaltyPoints: Number(user.loyaltyPoints || 0),
   currentRideId: user.currentRideId || null,
 });
 

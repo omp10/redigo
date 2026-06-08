@@ -1306,9 +1306,8 @@ const toUserPayload = (user, options = {}) => ({
   },
   referralCode: user.referralCode || '',
   referralCount: Number(user.referralCount || 0),
+  loyaltyPoints: Number(user.loyaltyPoints || 0),
   deletionRequestStatus: user.deletionRequest?.status || 'none',
-  referralCode: user.referralCode || '',
-  referralCount: Number(user.referralCount || 0),
   currentRideId: user.currentRideId || null,
   subscriptionSummary: options.subscriptionSummary || {
     activeCount: 0,
