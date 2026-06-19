@@ -12,7 +12,7 @@ const PAYMENT_METHODS = [
 const SharedTaxiConfirm = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { route, date, seats, total } = location.state || {};
+  const { route, date, seats, total, serviceTaxPercentage = 0 } = location.state || {};
   const basePath = location.pathname.includes('/taxi/user') ? '/taxi/user' : '';
 
   React.useEffect(() => {
@@ -22,6 +22,9 @@ const SharedTaxiConfirm = () => {
   }, [route, navigate, basePath]);
 
   if (!route) return null;
+
+  const serviceTaxAmount = Math.round((total * serviceTaxPercentage) / 100);
+  const grandTotal = total + serviceTaxAmount;
 
   const [method, setMethod] = useState('upi');
   const [paying, setPaying] = useState(false);
@@ -97,7 +100,7 @@ const SharedTaxiConfirm = () => {
                 <p className="text-[10px] font-semibold text-slate-400">{date} · {route.departure}</p>
                 <p className="text-[10px] font-semibold text-slate-400">Seats: {seats?.map(s=>s.label).join(', ')}</p>
               </div>
-              <p className="text-[20px] font-extrabold text-[#20A354]">₹{total}</p>
+              <p className="text-[20px] font-extrabold text-[#20A354]">₹{grandTotal}</p>
             </div>
             
             <div className="mt-1 border-t border-dashed border-slate-100 pt-2 space-y-1">
@@ -226,12 +229,18 @@ const SharedTaxiConfirm = () => {
             <span>₹{route.price} × {seats?.length} seat{seats?.length > 1 ? 's' : ''}</span>
             <span className="font-extrabold text-slate-955">₹{total}</span>
           </div>
+          {serviceTaxPercentage > 0 && (
+            <div className="flex justify-between text-[12px] font-semibold text-slate-500">
+              <span>Service Tax ({serviceTaxPercentage}%)</span>
+              <span className="font-extrabold text-slate-955">₹{serviceTaxAmount}</span>
+            </div>
+          )}
           <div className="flex justify-between text-[12px] font-semibold text-slate-500">
             <span>Platform fee</span><span>₹0</span>
           </div>
           <div className="border-t border-slate-50 pt-2 flex justify-between">
             <span className="text-[14px] font-extrabold text-slate-900">Total</span>
-            <span className="text-[18px] font-extrabold text-[#20A354]">₹{total}</span>
+            <span className="text-[18px] font-extrabold text-[#20A354]">₹{grandTotal}</span>
           </div>
         </motion.div>
 
@@ -259,7 +268,7 @@ const SharedTaxiConfirm = () => {
           className="pointer-events-auto w-full bg-[#20A354] hover:bg-[#1a8543] py-4 rounded-[18px] text-[15px] font-extrabold text-white shadow-[0_8px_24px_rgba(32,163,84,0.25)] flex items-center justify-center gap-2 transition-all">
           {paying
             ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            : <><CheckCircle2 size={16} strokeWidth={2.5} /> Confirm & Pay ₹{total}</>}
+            : <><CheckCircle2 size={16} strokeWidth={2.5} /> Confirm & Pay ₹{grandTotal}</>}
         </motion.button>
       </div>
     </div>

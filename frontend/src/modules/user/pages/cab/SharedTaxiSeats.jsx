@@ -22,6 +22,7 @@ const SharedTaxiSeats = () => {
 
   const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [serviceTaxPercentage, setServiceTaxPercentage] = useState(0);
 
   useEffect(() => {
     if (!route) return;
@@ -32,6 +33,7 @@ const SharedTaxiSeats = () => {
         const routeData = response?.data?.data || response?.data || {};
         
         const nextVehicle = routeData.assignedVehicleTypeIds?.[0] || routeData.assignedVehicles?.[0] || null;
+        setServiceTaxPercentage(Number(nextVehicle?.serviceTaxPercentage || 0));
         const seatAvailability = routeData.seatAvailability || {};
         const availabilityKey = nextVehicle?._id && route.scheduleId
           ? `${String(nextVehicle._id)}:${String(route.scheduleId)}`
@@ -270,7 +272,7 @@ const SharedTaxiSeats = () => {
           )}
         </AnimatePresence>
         <motion.button whileTap={{ scale: 0.98 }} disabled={selected.length === 0}
-          onClick={() => navigate(`${basePath}/cab/shared/confirm`, { state: { route, date, seats: selected, total } })}
+          onClick={() => navigate(`${basePath}/cab/shared/confirm`, { state: { route, date, seats: selected, total, serviceTaxPercentage } })}
           className={`pointer-events-auto w-full py-4 rounded-[18px] text-[15px] font-extrabold text-white shadow-[0_8px_24px_rgba(32,163,84,0.25)] flex items-center justify-center gap-2 transition-all ${
             selected.length > 0 ? 'bg-[#20A354] hover:bg-[#1a8543]' : 'bg-slate-355 cursor-not-allowed'
           }`}>
