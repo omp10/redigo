@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X, Banknote, CreditCard, ChevronDown, Clock3, LoaderCircle, Eye, TicketPercent, CheckCircle2 } from 'lucide-react';
-import { GoogleMap, MarkerF, OverlayView, PolylineF } from '@react-google-maps/api';
+import { GoogleMap, OverlayView, PolylineF } from '@react-google-maps/api';
 import api from '../../../../shared/api/axiosInstance';
 import { toHistorySafeState } from '../../../../shared/utils/historyState';
 import { HAS_VALID_GOOGLE_MAPS_KEY, useAppGoogleMapsLoader } from '../../../admin/utils/googleMaps';
@@ -134,33 +134,153 @@ const AnimatedVehicleMarker = React.memo(({ driver, iconUrl, isMapInteracting = 
   );
 });
 
-const buildFallbackRoute = (origin, destination) => {
+const getRoutesClass = async () => {
+  if (window.google?.maps?.routes?.Route?.computeRoutes) {
+    return window.google.maps.routes.Route;
+  }
+
+  if (window.google?.maps?.importLibrary) {
+    const routesLibrary = await window.google.maps.importLibrary('routes');
+    return routesLibrary?.Route || window.google?.maps?.routes?.Route || null;
+  }
+
+  return null;
+};
+
+const normalizeRoutePoint = (point) => {
+  const lat = typeof point?.lat === 'function' ? point.lat() : Number(point?.lat);
+  const lng = typeof point?.lng === 'function' ? point.lng() : Number(point?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
+const getRoutePath = (route) => {
+  if (!Array.isArray(route?.path)) {
+    return [];
+  }
+
+  return route.path.map(normalizeRoutePoint).filter(Boolean);
+};
+
+const getStraightRoutePath = (origin, destination) => {
   if (!origin || !destination) {
     return [];
   }
 
-  const latDelta = destination.lat - origin.lat;
-  const lngDelta = destination.lng - origin.lng;
-  const bendScale = Math.abs(latDelta) > Math.abs(lngDelta) ? 0.28 : -0.28;
-  const latBend = latDelta * bendScale;
-  const lngBend = lngDelta * bendScale;
-
-  return [
-    origin,
-    { lat: origin.lat + latDelta * 0.18, lng: origin.lng + lngDelta * 0.08 },
-    { lat: origin.lat + latDelta * 0.36 + latBend, lng: origin.lng + lngDelta * 0.34 - lngBend },
-    { lat: origin.lat + latDelta * 0.62 - latBend, lng: origin.lng + lngDelta * 0.58 + lngBend },
-    { lat: origin.lat + latDelta * 0.84, lng: origin.lng + lngDelta * 0.9 },
-    destination,
-  ];
+  return [origin, destination];
 };
+
+const getRouteDurationSeconds = (value) => {
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d+(?:\.\d+)?)s$/);
+    if (match) {
+      return Number(match[1]);
+    }
+  }
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return numeric > 10000 ? numeric / 1000 : numeric;
+  }
+
+  return null;
+};
+
+const extractRouteMetrics = (route, fallbackDistanceMeters, fallbackDurationMinutes) => {
+  const legs = Array.isArray(route?.legs) ? route.legs : [];
+  const legDistanceMeters = legs.reduce((total, leg) => total + toFiniteNumber(leg?.distanceMeters, 0), 0);
+  const legDurationSeconds = legs.reduce((total, leg) => {
+    const seconds = getRouteDurationSeconds(leg?.durationMillis ?? leg?.duration);
+    return total + (Number.isFinite(seconds) ? seconds : 0);
+  }, 0);
+  const directDurationSeconds = getRouteDurationSeconds(route?.durationMillis ?? route?.duration);
+  const distanceMeters = toFiniteNumber(route?.distanceMeters, legDistanceMeters || fallbackDistanceMeters);
+  const durationSeconds = directDurationSeconds || legDurationSeconds || fallbackDurationMinutes * 60;
+
+  return {
+    distanceMeters,
+    durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
+  };
+};
+
+const computeRoute = async ({ origin, destination, waypoints = [] }) => {
+  const Route = await getRoutesClass();
+
+  if (!Route?.computeRoutes) {
+    return null;
+  }
+
+  const response = await Route.computeRoutes({
+    origin,
+    destination,
+    intermediates: waypoints.map((waypoint) => ({ location: waypoint.location || waypoint })),
+    travelMode: 'DRIVING',
+    computeAlternativeRoutes: false,
+    fields: ['path', 'legs', 'distanceMeters', 'durationMillis', 'duration'],
+  });
+
+  return response?.routes?.[0] || null;
+};
+
+const computeLegacyDirectionsPath = ({ origin, destination, waypoints = [] }) => new Promise((resolve) => {
+  if (!window.google?.maps?.DirectionsService) {
+    resolve([]);
+    return;
+  }
+
+  const directionsService = new window.google.maps.DirectionsService();
+  directionsService.route(
+    {
+      origin,
+      destination,
+      waypoints,
+      travelMode: window.google.maps.TravelMode.DRIVING,
+      provideRouteAlternatives: false,
+    },
+    (result, status) => {
+      if (status !== 'OK') {
+        resolve([]);
+        return;
+      }
+
+      const overviewPath = result?.routes?.[0]?.overview_path || [];
+      resolve(overviewPath.map(normalizeRoutePoint).filter(Boolean));
+    },
+  );
+});
+
+const MapDotMarker = ({ position, title, fillColor, borderColor = '#ffffff', size = 16 }) => (
+  <OverlayView
+    position={position}
+    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    getPixelPositionOffset={() => ({ x: -(size / 2), y: -(size / 2) })}
+  >
+    <div
+      className="pointer-events-none rounded-full shadow-[0_8px_18px_rgba(15,23,42,0.25)]"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: fillColor,
+        border: `2px solid ${borderColor}`,
+      }}
+      title={title}
+      aria-label={title}
+    />
+  </OverlayView>
+);
 
 const VehicleMapPreview = React.memo(({ center, dropPosition, stops = [], drivers, selectedVehicle, isLoaded, loadError }) => {
   const mapRef = useRef(null);
+  const routePolylinesRef = useRef([]);
   const [routePath, setRoutePath] = useState([]);
   const [routeError, setRouteError] = useState('');
   const [isMapInteracting, setIsMapInteracting] = useState(false);
   const [mapZoom, setMapZoom] = useState(13);
+  const [isMapReady, setIsMapReady] = useState(false);
   const waypointRequests = useMemo(
     () =>
       (Array.isArray(stops) ? stops : [])
@@ -171,48 +291,104 @@ const VehicleMapPreview = React.memo(({ center, dropPosition, stops = [], driver
   );
 
   useEffect(() => {
-    if (!isLoaded || !dropPosition || !window.google?.maps?.DirectionsService) {
+    const clearNativeRoutePolylines = () => {
+      routePolylinesRef.current.forEach((polyline) => polyline.setMap(null));
+      routePolylinesRef.current = [];
+    };
+
+    if (!isLoaded || !isMapReady || !dropPosition) {
+      clearNativeRoutePolylines();
       setRoutePath([]);
       setRouteError('');
       return;
     }
 
     let active = true;
-    const directionsService = new window.google.maps.DirectionsService();
+    clearNativeRoutePolylines();
+    setRoutePath([]);
 
-    directionsService.route(
-      {
-        origin: center,
-        destination: dropPosition,
-        waypoints: waypointRequests,
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        provideRouteAlternatives: false,
-      },
-      (result, status) => {
+    const loadRoute = async () => {
+      try {
+        const route = await computeRoute({
+          origin: center,
+          destination: dropPosition,
+          waypoints: waypointRequests,
+        });
+
         if (!active) {
           return;
         }
 
-        if (status === 'OK' && result?.routes?.[0]?.overview_path?.length) {
-          setRoutePath(
-            result.routes[0].overview_path.map((point) => ({
-              lat: point.lat(),
-              lng: point.lng(),
-            })),
-          );
+        const path = getRoutePath(route);
+        if (path.length) {
+          setRoutePath(path);
           setRouteError('');
           return;
         }
 
-        setRoutePath(buildFallbackRoute(center, dropPosition));
-        setRouteError(status || 'Directions unavailable');
-      },
-    );
+        if (route?.createPolylines && mapRef.current) {
+          const polylines = route.createPolylines();
+          if (polylines.length) {
+            polylines.forEach((polyline) => {
+              polyline.setOptions({
+                strokeColor: '#111827',
+                strokeOpacity: 0.85,
+                strokeWeight: 4,
+              });
+              polyline.setMap(mapRef.current);
+            });
+            routePolylinesRef.current = polylines;
+            setRoutePath([]);
+            setRouteError('');
+            return;
+          }
+        }
+
+        const legacyPath = await computeLegacyDirectionsPath({
+          origin: center,
+          destination: dropPosition,
+          waypoints: waypointRequests,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        if (legacyPath.length) {
+          setRoutePath(legacyPath);
+          setRouteError('');
+          return;
+        }
+
+        setRoutePath(getStraightRoutePath(center, dropPosition));
+        setRouteError('Routes unavailable');
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        const legacyPath = await computeLegacyDirectionsPath({
+          origin: center,
+          destination: dropPosition,
+          waypoints: waypointRequests,
+        });
+
+        if (!active) {
+          return;
+        }
+
+        setRoutePath(legacyPath.length ? legacyPath : getStraightRoutePath(center, dropPosition));
+        setRouteError(legacyPath.length ? '' : error?.message || 'Routes unavailable');
+      }
+    };
+
+    loadRoute();
 
     return () => {
       active = false;
+      clearNativeRoutePolylines();
     };
-  }, [center, dropPosition, isLoaded, waypointRequests]);
+  }, [center, dropPosition, isLoaded, isMapReady, waypointRequests]);
 
   if (!HAS_VALID_GOOGLE_MAPS_KEY) {
     return (
@@ -256,10 +432,14 @@ const VehicleMapPreview = React.memo(({ center, dropPosition, stops = [], driver
         options={SELECT_VEHICLE_MAP_OPTIONS}
         onLoad={(map) => {
           mapRef.current = map;
+          setIsMapReady(true);
           setMapZoom(map.getZoom?.() || 13);
         }}
         onUnmount={() => {
+          routePolylinesRef.current.forEach((polyline) => polyline.setMap(null));
+          routePolylinesRef.current = [];
           mapRef.current = null;
+          setIsMapReady(false);
         }}
         onDragStart={() => setIsMapInteracting(true)}
         onZoomChanged={() => {
@@ -268,30 +448,20 @@ const VehicleMapPreview = React.memo(({ center, dropPosition, stops = [], driver
         }}
         onIdle={() => setIsMapInteracting(false)}
       >
-        <MarkerF
+        <MapDotMarker
           position={center}
           title="Pickup"
-          icon={{
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: '#f8e001',
-            fillOpacity: 1,
-            strokeColor: '#111827',
-            strokeWeight: 2,
-            scale: 8,
-          }}
+          fillColor="#f8e001"
+          borderColor="#111827"
+          size={16}
         />
         {dropPosition && (
-          <MarkerF
+          <MapDotMarker
             position={dropPosition}
             title="Drop"
-            icon={{
-              path: window.google.maps.SymbolPath.CIRCLE,
-              fillColor: '#fb923c',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2,
-              scale: 7,
-            }}
+            fillColor="#fb923c"
+            borderColor="#ffffff"
+            size={14}
           />
         )}
         {routePath.length > 1 && (
@@ -1101,41 +1271,33 @@ const SelectVehicle = () => {
       return;
     }
 
-    if (!isMapLoaded || !window.google?.maps?.DirectionsService) {
+    if (!isMapLoaded) {
       setIsResolvingTripMetrics(true);
       return;
     }
 
     let active = true;
     setIsResolvingTripMetrics(true);
-    const directionsService = new window.google.maps.DirectionsService();
 
-    directionsService.route(
-      {
-        origin: pickupPosition,
-        destination: dropPosition,
-        waypoints: stops
-          .map((stop) => String(stop || '').trim())
-          .filter(Boolean)
-          .map((stop) => ({ location: stop, stopover: true })),
-        travelMode: window.google.maps.TravelMode.DRIVING,
-        provideRouteAlternatives: false,
-      },
-      (result, status) => {
+    const resolveTripMetrics = async () => {
+      try {
+        const route = await computeRoute({
+          origin: pickupPosition,
+          destination: dropPosition,
+          waypoints: stops
+            .map((stop) => String(stop || '').trim())
+            .filter(Boolean)
+            .map((stop) => ({ location: stop })),
+        });
+
         if (!active) {
           return;
         }
 
-        const leg = result?.routes?.[0]?.legs?.[0];
-        const distanceMeters = toFiniteNumber(leg?.distance?.value, fallbackDistanceMeters);
-        const durationMinutes = Math.max(
-          1,
-          Math.round(toFiniteNumber(leg?.duration?.value, fallbackDurationMinutes * 60) / 60),
-        );
-
-        if (status === 'OK' && leg) {
+        if (route) {
+          const metrics = extractRouteMetrics(route, fallbackDistanceMeters, fallbackDurationMinutes);
           setIsResolvingTripMetrics(false);
-          setTripMetrics({ distanceMeters, durationMinutes });
+          setTripMetrics(metrics);
           return;
         }
 
@@ -1144,8 +1306,20 @@ const SelectVehicle = () => {
           distanceMeters: fallbackDistanceMeters,
           durationMinutes: fallbackDurationMinutes,
         });
-      },
-    );
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setIsResolvingTripMetrics(false);
+        setTripMetrics({
+          distanceMeters: fallbackDistanceMeters,
+          durationMinutes: fallbackDurationMinutes,
+        });
+      }
+    };
+
+    resolveTripMetrics();
 
     return () => {
       active = false;

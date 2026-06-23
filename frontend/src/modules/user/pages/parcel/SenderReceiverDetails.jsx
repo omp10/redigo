@@ -18,7 +18,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { GoogleMap, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, OverlayView } from '@react-google-maps/api';
 import { HAS_VALID_GOOGLE_MAPS_KEY, useAppGoogleMapsLoader } from '../../../admin/utils/googleMaps';
 import { userAuthService } from '../../services/authService';
 import api from '../../../../shared/api/axiosInstance';
@@ -243,6 +243,37 @@ const getLiveVehiclePosition = (coords) => {
     lng: position.lng + 0.0022,
   };
 };
+
+const MapDotMarker = ({ position, title, fillColor }) => (
+  <OverlayView
+    position={position}
+    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    getPixelPositionOffset={() => ({ x: -7, y: -7 })}
+  >
+    <div
+      className="pointer-events-none h-3.5 w-3.5 rounded-full border-2 border-white shadow-[0_8px_18px_rgba(15,23,42,0.22)]"
+      style={{ backgroundColor: fillColor }}
+      title={title}
+      aria-label={title}
+    />
+  </OverlayView>
+);
+
+const MapVehicleMarker = ({ position, iconUrl, title }) => (
+  <OverlayView
+    position={position}
+    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+    getPixelPositionOffset={() => ({ x: -24, y: -24 })}
+  >
+    <img
+      src={iconUrl}
+      alt={title}
+      draggable={false}
+      className="pointer-events-none h-12 w-12 object-contain drop-shadow-[0_8px_12px_rgba(15,23,42,0.28)]"
+      title={title}
+    />
+  </OverlayView>
+);
 
 const PhoneInput = ({ label, value, onChange, error, name, onClearError, disabled = false }) => (
   <div className="space-y-2">
@@ -1290,42 +1321,24 @@ const SenderReceiverDetails = () => {
               gestureHandling: 'greedy',
             }}
           >
-            <MarkerF
+            <MapDotMarker
               position={coordPairToLatLng(pickupCoords)}
               title="Pickup"
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: '#10b981',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 2,
-                scale: 7,
-              }}
+              fillColor="#10b981"
             />
             {dropCoords ? (
-              <MarkerF
+              <MapDotMarker
                 position={coordPairToLatLng(dropCoords)}
                 title="Drop"
-                icon={{
-                  path: window.google.maps.SymbolPath.CIRCLE,
-                  fillColor: '#f43f5e',
-                  fillOpacity: 1,
-                  strokeColor: '#ffffff',
-                  strokeWeight: 2,
-                  scale: 7,
-                }}
+                fillColor="#f43f5e"
               />
             ) : null}
             {activeSelectedVehicleMapIcon ? (
-              <MarkerF
+              <MapVehicleMarker
                 key={getVehicleId(activeSelectedVehicle) || activeSelectedVehicleMapIcon}
                 position={liveVehiclePosition}
                 title={activeSelectedVehicle?.name || 'Selected delivery vehicle'}
-                icon={{
-                  url: activeSelectedVehicleMapIcon,
-                  scaledSize: new window.google.maps.Size(48, 48),
-                  anchor: new window.google.maps.Point(24, 24),
-                }}
+                iconUrl={activeSelectedVehicleMapIcon}
               />
             ) : null}
           </GoogleMap>
