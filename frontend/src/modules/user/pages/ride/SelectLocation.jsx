@@ -29,6 +29,28 @@ const LOCATION_COORDS = {
 const getCoords = (title, fallback = [75.8577, 22.7196]) => LOCATION_COORDS[title] || fallback;
 const DEFAULT_COORDS = [75.8577, 22.7196];
 const sanitizeLocationInput = (value) => String(value || '').replace(/^\s+/g, '').replace(/\s{2,}/g, ' ');
+const NEARBY_SUGGESTION_RADIUS_KM = 18;
+
+const calculateDistanceKm = (fromCoords = [], toCoords = []) => {
+  const [fromLng, fromLat] = fromCoords;
+  const [toLng, toLat] = toCoords;
+
+  if (![fromLng, fromLat, toLng, toLat].every((value) => Number.isFinite(Number(value)))) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const toRadians = (value) => (Number(value) * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const latDelta = toRadians(toLat - fromLat);
+  const lngDelta = toRadians(toLng - fromLng);
+  const startLat = toRadians(fromLat);
+  const endLat = toRadians(toLat);
+  const a =
+    Math.sin(latDelta / 2) ** 2
+    + Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) ** 2;
+
+  return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
 
 const unwrapResults = (response) => {
   const payload = response?.data?.data || response?.data || response;
@@ -419,8 +441,23 @@ const SelectLocation = () => {
       ? serviceStores.filter((store) => String(getStoreZoneId(store)) === currentZoneId)
       : [];
 
+    const sortByPickupDistance = (items = []) => {
+      if (!Array.isArray(pickupCoords) || pickupCoords.length !== 2) {
+        return items;
+      }
+
+      return [...items]
+        .map((item) => ({
+          ...item,
+          distanceKm: Array.isArray(item.coords)
+            ? calculateDistanceKm(pickupCoords, item.coords)
+            : Number.POSITIVE_INFINITY,
+        }))
+        .sort((first, second) => first.distanceKm - second.distanceKm);
+    };
+
     if (zoneStores.length) {
-      return zoneStores.slice(0, 6).map((store) => ({
+      const storesWithCoords = zoneStores.map((store) => ({
         title: store.name || store.address || 'Service Store',
         address: store.address || currentZone?.name || 'Service Store',
         coords:
@@ -428,21 +465,52 @@ const SelectLocation = () => {
             ? [Number(store.longitude), Number(store.latitude)]
             : null,
       }));
+
+      const nearbyStores = sortByPickupDistance(storesWithCoords)
+        .filter((store) => !Number.isFinite(store.distanceKm) || store.distanceKm <= NEARBY_SUGGESTION_RADIUS_KM);
+
+      return (nearbyStores.length ? nearbyStores : sortByPickupDistance(storesWithCoords)).slice(0, 6);
     }
 
-    return allResults.slice(0, 6);
-  }, [currentZone, serviceStores]);
+    const localNearby = sortByPickupDistance(
+      allResults.map((result) => ({
+        ...result,
+        coords: getCoords(result.title, null),
+      })),
+    );
+    const withinRadius = localNearby.filter((result) => result.distanceKm <= NEARBY_SUGGESTION_RADIUS_KM);
+
+    return (withinRadius.length ? withinRadius : localNearby).slice(0, 6);
+  }, [allResults, currentZone, pickupCoords, serviceStores]);
 
   const localSearchResults = useMemo(
-    () =>
-      query.trim().length >= 1
-        ? allResults.filter(
+    () => {
+      if (query.trim().length >= 1) {
+        const matchingResults = allResults
+          .filter(
           (result) =>
             result.title.toLowerCase().includes(query.toLowerCase())
             || result.address.toLowerCase().includes(query.toLowerCase()),
-        )
-        : popularSuggestions,
-    [popularSuggestions, query],
+          )
+          .map((result) => ({
+            ...result,
+            coords: getCoords(result.title, null),
+          }))
+          .map((result) => ({
+            ...result,
+            distanceKm: Array.isArray(result.coords)
+              ? calculateDistanceKm(pickupCoords, result.coords)
+              : Number.POSITIVE_INFINITY,
+          }))
+          .sort((first, second) => first.distanceKm - second.distanceKm);
+
+        const nearbyMatches = matchingResults.filter((result) => result.distanceKm <= NEARBY_SUGGESTION_RADIUS_KM);
+        return (nearbyMatches.length ? nearbyMatches : matchingResults).slice(0, 6);
+      }
+
+      return popularSuggestions;
+    },
+    [allResults, pickupCoords, popularSuggestions, query],
   );
 
   useEffect(() => {
@@ -452,7 +520,10 @@ const SelectLocation = () => {
       return;
     }
 
-    const normalizedQuery = query.trim().toLowerCase();
+    const pickupBiasKey = Array.isArray(pickupCoords) && pickupCoords.length === 2
+      ? pickupCoords.map((coord) => Number(coord).toFixed(4)).join(',')
+      : '';
+    const normalizedQuery = `${query.trim().toLowerCase()}|${pickupBiasKey}`;
     const cached = searchCacheRef.current.get(normalizedQuery);
     if (cached) {
       setRemoteResults(cached);
@@ -473,6 +544,15 @@ const SelectLocation = () => {
 
       if (zoneBounds) {
         request.bounds = zoneBounds;
+      }
+
+      if (Array.isArray(pickupCoords) && pickupCoords.length === 2 && window.google?.maps?.Circle) {
+        request.location = new window.google.maps.LatLng(Number(pickupCoords[1]), Number(pickupCoords[0]));
+        request.radius = NEARBY_SUGGESTION_RADIUS_KM * 1000;
+        request.locationBias = new window.google.maps.Circle({
+          center: { lat: Number(pickupCoords[1]), lng: Number(pickupCoords[0]) },
+          radius: NEARBY_SUGGESTION_RADIUS_KM * 1000,
+        });
       }
 
       autocompleteServiceRef.current.getPlacePredictions(request, (predictions = [], status) => {
@@ -497,7 +577,7 @@ const SelectLocation = () => {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [query, zoneBounds]);
+  }, [pickupCoords, query, zoneBounds]);
 
   const searchResults = useMemo(() => {
     const merged = [...remoteResults, ...localSearchResults];
